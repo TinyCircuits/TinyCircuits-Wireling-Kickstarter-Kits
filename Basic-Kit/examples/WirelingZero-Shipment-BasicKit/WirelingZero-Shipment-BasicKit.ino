@@ -6,7 +6,7 @@
  * Port 2: Digital Sensor Wireling OR Large Button Wireling
  * Port 3: RGB LED Wireling OR Buzzer Wireling
  * 
- * When plugged in according to the above mapping, the 042 Screen will 
+ * When plugged in according to the above mapping, the 0.42" Screen will 
  * display the lux value read from the light sensor, and will also display 
  * the HIGH or LOW state of whatever Wireling is connected to Port 2 (The 
  * digital hall, or large button). When the Wireling on Port 2 reads LOW, 
