@@ -14,15 +14,14 @@
  * Written by: Hunter Hykes for TinyCircuits
  *
  * Initiated: 12/26/2019 
- * Updated: 01/02/2020
+ * Updated: 01/14/2020
  ************************************************************************/
 
 #include <Wire.h>               // For I2C communication with sensor
 #include <SPI.h>
 #include <Wireling.h>
 #include <TinierScreen.h>       // For interfacing with the 0.96" OLED
-#include <TinyBuffer.h>         // For building a screen buffer for the 0.96" OLED
-#include "font.h"
+#include <GraphicsBuffer.h>     // For building a screen buffer for the 0.96" OLED
 #include <FastLED.h>            // For interfacing with the RGB LED
 #include "Adafruit_Sensor.h"
 #include "Adafruit_BME680.h"
@@ -32,14 +31,13 @@
 #define SerialMonitorInterface Serial
 #elif defined(ARDUINO_ARCH_SAMD)
 #define SerialMonitorInterface SerialUSB
- 
 #endif
 
 /* * * * * * * * * * 0.96" OLED * * * * * * * * * */
 #define OLED_PORT 0 // use Port 0 for screen
 #define OLED_RST (uint8_t) A0 //OLED reset line
-TinierScreen display096 = TinierScreen(OLED096);
-TinyBuffer screenBuffer096 = TinyBuffer(128, 64, colorDepth1BPP);
+TinierScreen display096 = TinierScreen(TinierScreen096);
+GraphicsBuffer screenBuffer096 = GraphicsBuffer(128, 64, colorDepth1BPP);
 
 /* * * * * * * * * * MOISTURE * * * * * * * * * * */
 #define MOISTURE_PORT 1
@@ -108,16 +106,14 @@ void setup(void) {
   SerialMonitorInterface.begin(115200);
   Wire.begin();
   Wireling.begin(); // Enable power & select port
-  delay(200); // boot sensor
+  delay(250); // let things power on
   
   /* * * * * * Screen Stuff * * * * */
-  pinMode(OLED_RST, OUTPUT);
-  screenBuffer096.clear();
-  digitalWrite(OLED_RST, LOW);
-  delay(1);
-  digitalWrite(OLED_RST, HIGH);
   Wireling.selectPort(OLED_PORT);
-  display096.begin();
+  display096.begin(OLED_RST);
+  if (screenBuffer096.begin()) {
+    //memory allocation error- buffer too big!
+  }
   screenBuffer096.setFont(thinPixel7_10ptFontInfo);
   
   /* * * * * Moisture Sensor * * * * */
@@ -164,7 +160,9 @@ void loop(void) {
   printWeather();           // write environment data to buffer
   printLux();               // write illuminance data to buffer
   printMoisture();          // write soil data to buffer
+  Wire.setClock(1000000);
   display096.writeBuffer(screenBuffer096.getBuffer(), screenBuffer096.getBufferSize()); // write buffer to the screen
+  Wire.setClock(50000);
 }
 
 void getWeather() {
