@@ -1,0 +1,238 @@
+/************************************************************************
+   Wireling Basic Kit Shipment Program
+   This program uses all six of the Wirelings included with the Basic Kit:
+   Port 0: 0.42" OLED Screen Wireling
+   Port 1: Ambient Light Sensor Wireling
+   Port 2: Digital Sensor Wireling OR Large Button Wireling
+   Port 3: RGB LED Wireling OR Buzzer Wireling
+
+   When plugged in according to the above mapping, the 0.42" Screen will
+   display the lux value read from the light sensor, and will also display
+   the HIGH or LOW state of whatever Wireling is connected to Port 2 (The
+   digital hall, or large button). When the Wireling on Port 2 reads LOW,
+   the RGB LED or Buzzer connected to Port 3 will either light up a short
+   RGB sequence, or play a few notes, respectively.
+
+   Hardware by: TinyCircuits
+   Written by: Laveréna Wienclaw for TinyCircuits
+
+   Initiated: 11/2/2019
+   Updated: 12/5/2019
+ ************************************************************************/
+
+#include <Wire.h>                   // For I2C communication
+#include <Wireling.h>               // For interfacing with Wirelings
+#include <TinierScreen.h>   // For interfacing with the 0.42" OLED
+#include <GraphicsBuffer.h> // For building a screen buffer for the 0.42" OLED
+//#include "exampleSprites.h"         // Holds arrays of example Sprites
+#include "pitches.h"                // Tones used with the Buzzer
+#include <FastLED.h>                // For the RGB LED
+
+// Make compatible with all TinyCircuits processors
+#if defined(ARDUINO_ARCH_AVR)
+#define SerialMonitorInterface Serial
+#elif defined(ARDUINO_ARCH_SAMD)
+#define SerialMonitorInterface SerialUSB
+#endif
+
+
+/***************************** 042 Screen OLED Varibles ****************************/
+#define OLED_042_PORT 0 // use Port 0 for screen
+#define OLED_042_RESET (int) A0 // use Port 0 reset pin
+#define OLED_042_WIDTH 72
+#define OLED_042_HEIGHT 40
+TinierScreen display042 = TinierScreen(TinierScreen042);
+GraphicsBuffer screenBuffer042 = GraphicsBuffer(OLED_042_WIDTH, OLED_042_HEIGHT, colorDepth1BPP);
+
+
+/************************* Ambient Light Sensor Variables **************************/
+// Communication address with the sensor
+#define TSL2572_I2CADDR     0x39
+
+// Sets the gain
+#define   GAIN_1X 0
+#define   GAIN_8X 1
+#define  GAIN_16X 2
+#define GAIN_120X 3
+
+//only use this with 1x and 8x gain settings
+#define GAIN_DIVIDE_6 true
+
+// Global variable for gain value used to Read the sensor
+int gain_val = 0;
+
+
+/***************************** Buzzer Sensor Variables *****************************/
+#define USE_BUZZER false // set to true if using buzzer
+// notes in the melody:
+int melody[] = {
+  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
+};
+
+// note durations: 4 = quarter note, 8 = eighth note, etc.:
+int noteDurations[] = {
+  4, 8, 8, 4, 4, 4, 4, 4
+};
+
+
+/******************************** RGB LED Variables ********************************/
+#define USE_RGB true // set to true if using RGB LED
+
+#define NUM_LEDS 1 // This is the number of RGB LEDs connected to the pin
+#define COLOR_ORDER GRB
+CRGB leds[NUM_LEDS];
+int brightness = 128; // Brightness is on a scale of 0-255, 128 is 50% brightness
+
+
+/*********************************** Wireling Variables ****************************/
+#define AMBIENT_PORT 1
+#define BUTTON_HALL_PIN (uint8_t)A2
+#define BUZZER_RGB_PIN (uint8_t) A3
+
+bool highOrLow = false;
+
+
+void setup() {
+  SerialUSB.begin(9600);
+  Wire.begin();
+  Wireling.begin(); // Enable & Power Wirelings
+
+  /* * * * * * * * * 0.42" Screen Stuff * * * * * * * */
+  Wireling.selectPort(OLED_042_PORT);
+  display042.begin(OLED_042_RESET);
+  if (screenBuffer042.begin()) {
+    //memory allocation error- buffer too big!
+  }
+  screenBuffer042.setFont(thinPixel7_10ptFontInfo);
+
+  // Initialize Ambient Light Sensor
+  Wireling.selectPort(AMBIENT_PORT);
+  TSL2572Init(GAIN_16X);
+
+  // Initialize RGB LED
+  FastLED.addLeds<WS2812, BUZZER_RGB_PIN, COLOR_ORDER>(leds, NUM_LEDS);
+  FastLED.setBrightness(brightness);
+  pinMode(BUZZER_RGB_PIN, OUTPUT);
+}
+
+void loop() {
+  String digStr;
+  char digBuf[13]; // buffer for digital input character array
+
+  /************************************ Port 1 ************************************/
+  Wireling.selectPort(AMBIENT_PORT);
+  float Lux = Tsl2572ReadAmbientLight();
+
+  // Create a char array with results to print to screen
+  String luxStrVal = String(Lux);
+  String luxFullString = ("Lux:" + luxStrVal);
+  char luxBuf[10];
+  luxFullString.toCharArray(luxBuf, 10);
+
+  /************************************ Port 2 ************************************/
+  highOrLow = digitalRead(BUTTON_HALL_PIN);
+  if (highOrLow) {
+    digStr = "Port 2: HIGH";
+  } else if (!highOrLow) { // button was pressed, or hall was activated
+    digStr = "Port 2: LOW";
+  } else {
+    digStr = "Port 2: N/A";
+  }
+  digStr.toCharArray(digBuf, 13);
+
+  /************************************ Port 0 ************************************/
+  Wireling.selectPort(OLED_042_PORT);
+  screenBuffer042.clear();
+  screenBuffer042.setCursor(0, 0);
+  screenBuffer042.print(digBuf);
+  screenBuffer042.setCursor(0, 24);
+  screenBuffer042.print(luxBuf);
+  Wire.setClock(1000000);
+  display042.writeBuffer(screenBuffer042.getBuffer(), screenBuffer042.getBufferSize()); // write buffer to the screen
+  Wire.setClock(50000);
+
+  if(!highOrLow) {
+    if (USE_RGB) lightRGB();
+    if (USE_BUZZER) playBuzzer();
+  }
+}
+
+/************************************* Ambient Light Functions **********************************/
+// Used to interface with the sensor by writing to its registers directly
+void Tsl2572RegisterWrite(byte regAddr, byte regData) {
+  Wire.beginTransmission(TSL2572_I2CADDR);
+  Wire.write(0x80 | regAddr);
+  Wire.write(regData);
+  Wire.endTransmission();
+}
+
+// Initializes the light sensor to be ready for output
+void TSL2572Init(uint8_t gain) {
+  Tsl2572RegisterWrite( 0x0F, gain );//set gain
+  Tsl2572RegisterWrite( 0x01, 0xED );//51.87 ms
+  Tsl2572RegisterWrite( 0x00, 0x03 );//turn on
+  if (GAIN_DIVIDE_6)
+    Tsl2572RegisterWrite( 0x0D, 0x04 );//scale gain by 0.16
+  if (gain == GAIN_1X)gain_val = 1;
+  else if (gain == GAIN_8X)gain_val = 8;
+  else if (gain == GAIN_16X)gain_val = 16;
+  else if (gain == GAIN_120X)gain_val = 120;
+}
+
+// Read the lux value from the light sensor so we can print it out
+float Tsl2572ReadAmbientLight() {
+  uint8_t data[4];
+  int c0, c1;
+  float lux1, lux2, cpl;
+
+  Wire.beginTransmission(TSL2572_I2CADDR);
+  Wire.write(0xA0 | 0x14);
+  Wire.endTransmission();
+  Wire.requestFrom(TSL2572_I2CADDR, 4);
+  for (uint8_t i = 0; i < 4; i++)
+    data[i] = Wire.read();
+
+  c0 = data[1] << 8 | data[0];
+  c1 = data[3] << 8 | data[2];
+
+  //see TSL2572 datasheet: https://www.mouser.com/ds/2/588/TSL2672_Datasheet_EN_v1-255424.pdf
+  cpl = 51.87 * (float)gain_val / 60.0;
+  if (GAIN_DIVIDE_6) cpl /= 6.0;
+  lux1 = ((float)c0 - (1.87 * (float)c1)) / cpl;
+  lux2 = ((0.63 * (float)c0) - (float)c1) / cpl;
+  cpl = max(lux1, lux2);
+  return max(cpl, 0.0);
+}
+
+void lightRGB() {
+  for (int x = 0; x < NUM_LEDS; x++) { // cycle through all LEDs attached to LED_PIN
+    leds[x] = CRGB( 255, 0, 0); // RED
+    FastLED.show();
+    delay(100);
+    leds[x] = CRGB(0, 255, 0); // GREEN
+    FastLED.show();
+    delay(100);
+    leds[x] = CRGB(0, 0, 255); // BLUE
+    FastLED.show();
+    delay(100);
+    leds[x] = CRGB(0, 0, 0); // NOTHING
+    FastLED.show();
+    delay(5);
+  }
+}
+
+void playBuzzer() {
+  for (int thisNote = 0; thisNote < 8; thisNote++) {
+    // to calculate the note duration, take one second divided by the note type.
+    //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
+    int noteDuration = 1000 / noteDurations[thisNote];
+    tone(BUZZER_RGB_PIN, melody[thisNote], noteDuration);
+
+    // to distinguish the notes, set a minimum time between them.
+    // the note's duration + 30% seems to work well:
+    int pauseBetweenNotes = noteDuration * 1.30;
+    delay(pauseBetweenNotes);
+    // stop the tone playing:
+    noTone(8);
+  }
+}
