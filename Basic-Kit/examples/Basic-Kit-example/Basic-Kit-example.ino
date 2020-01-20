@@ -17,7 +17,7 @@
    Written by: Laveréna Wienclaw for TinyCircuits
 
    Initiated: 11/2/2019
-   Updated: 12/5/2019
+   Updated: 01/20/2020
  ************************************************************************/
 
 #include <Wire.h>                   // For I2C communication
@@ -35,7 +35,6 @@
 #define SerialMonitorInterface SerialUSB
 #endif
 
-
 /***************************** 042 Screen OLED Varibles ****************************/
 #define OLED_042_PORT 0 // use Port 0 for screen
 #define OLED_042_RESET (int) A0 // use Port 0 reset pin
@@ -43,7 +42,6 @@
 #define OLED_042_HEIGHT 40
 TinierScreen display042 = TinierScreen(TinierScreen042);
 GraphicsBuffer screenBuffer042 = GraphicsBuffer(OLED_042_WIDTH, OLED_042_HEIGHT, colorDepth1BPP);
-
 
 /************************* Ambient Light Sensor Variables **************************/
 // Communication address with the sensor
@@ -61,12 +59,10 @@ GraphicsBuffer screenBuffer042 = GraphicsBuffer(OLED_042_WIDTH, OLED_042_HEIGHT,
 // Global variable for gain value used to Read the sensor
 int gain_val = 0;
 
-
 /***************************** Buzzer Sensor Variables *****************************/
-#define USE_BUZZER false // set to true if using buzzer
 // notes in the melody:
 int melody[] = {
-  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
+  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 1, NOTE_B3, NOTE_C4
 };
 
 // note durations: 4 = quarter note, 8 = eighth note, etc.:
@@ -74,23 +70,18 @@ int noteDurations[] = {
   4, 8, 8, 4, 4, 4, 4, 4
 };
 
-
 /******************************** RGB LED Variables ********************************/
-#define USE_RGB true // set to true if using RGB LED
-
 #define NUM_LEDS 1 // This is the number of RGB LEDs connected to the pin
 #define COLOR_ORDER GRB
 CRGB leds[NUM_LEDS];
 int brightness = 128; // Brightness is on a scale of 0-255, 128 is 50% brightness
 
-
 /*********************************** Wireling Variables ****************************/
 #define AMBIENT_PORT 1
-#define BUTTON_HALL_PIN (uint8_t)A2
-#define BUZZER_RGB_PIN (uint8_t) A3
+#define BUTTON_HALL_PIN A2
+#define BUZZER_RGB_PIN A3
 
 bool highOrLow = false;
-
 
 void setup() {
   SerialUSB.begin(9600);
@@ -152,8 +143,8 @@ void loop() {
   Wire.setClock(50000);
 
   if(!highOrLow) {
-    if (USE_RGB) lightRGB();
-    if (USE_BUZZER) playBuzzer();
+    lightRGB();
+    playBuzzer();
   }
 }
 
@@ -232,7 +223,7 @@ void playBuzzer() {
     // the note's duration + 30% seems to work well:
     int pauseBetweenNotes = noteDuration * 1.30;
     delay(pauseBetweenNotes);
-    // stop the tone playing:
-    noTone(8);
+    
+    noTone(BUZZER_RGB_PIN); // stop the tone playing
   }
 }
