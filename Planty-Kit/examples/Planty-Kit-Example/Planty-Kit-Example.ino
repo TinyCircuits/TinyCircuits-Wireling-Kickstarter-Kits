@@ -16,7 +16,7 @@
  * Written by: Hunter Hykes for TinyCircuits
  *
  * Initiated: 12/26/2019 
- * Updated: 12/27/2019
+ * Updated: 01/30/2020
  ************************************************************************/
 
 #include <Wire.h>               // For I2C communication with sensor
