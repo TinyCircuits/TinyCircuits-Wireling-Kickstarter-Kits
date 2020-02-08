@@ -16,15 +16,19 @@
  * Written by: Hunter Hykes for TinyCircuits
  *
  * Initiated: 12/26/2019 
- * Updated: 12/27/2019
+ * Updated: 01/30/2020
  ************************************************************************/
 
 #include <Wire.h>               // For I2C communication with sensor
 #include <Wireling.h>
 #include <TinierScreen.h>       // For interfacing with the 0.69" OLED
+<<<<<<< HEAD
 #include <GraphicsBuffer.h>         // For building a screen buffer for the 0.69" OLED
 #include "font.h"
 #include <FastLED.h>            // For interfacing with the RGB LED
+=======
+#include <GraphicsBuffer.h>
+>>>>>>> 922a65595b52269fe4f220f9d9fee4ae0ee49fc2
 #include "pitches.h"
 
 // Make compatible with all TinyCircuits processors
@@ -36,9 +40,17 @@
 
 /* * * * * * * * * * 0.69" OLED * * * * * * * * * */
 #define OLED_PORT 0 // use Port 0 for screen
+<<<<<<< HEAD
 #define OLED_RST (uint8_t) A0 //OLED reset line
 TinierScreen display069 = TinierScreen(TinierScreen069);
 GraphicsBuffer screenBuffer069 = GraphicsBuffer(96, 16, colorDepth1BPP);
+=======
+#define OLED_RST A0 //OLED reset line
+#define OLED_069_WIDTH 96
+#define OLED_069_HEIGHT 16
+TinierScreen display069 = TinierScreen(TinierScreen069);
+GraphicsBuffer screenBuffer069 = GraphicsBuffer(OLED_069_WIDTH, OLED_069_HEIGHT, colorDepth1BPP);
+>>>>>>> 922a65595b52269fe4f220f9d9fee4ae0ee49fc2
 
 /* * * * * * * * * * BUZZER * * * * * * * * * */
 #define pin (uint8_t) A1
@@ -67,10 +79,6 @@ int gain_val = 0;
 #define BCOEFFICIENT 3380
 #define SERIESRESISTOR 35000
 
-
-
-
-
 // Simple templated averaging class based on Running Average by Rob Tillaart: http://arduino.cc/playground/Main/RunningAverage
 template <const unsigned int N>
 class RunningAverageFloat
@@ -98,15 +106,6 @@ RunningAverageFloat<35> moistureAverage;
 RunningAverageFloat<35> temperatureAverage;
 RunningAverageFloat<35> luxAverage;
 
-
-
-
-
-
-
-
-
-
 int melody[] = { // Notes in the melody:
   NOTE_C4, NOTE_C3, NOTE_C4, NOTE_C3
 };
@@ -122,14 +121,11 @@ void setup(void) {
   delay(200); // boot sensor
   
   /* * * * * * Screen Stuff * * * * */
-  pinMode(OLED_RST, OUTPUT);
   Wireling.selectPort(OLED_PORT);
-  screenBuffer069.clear();
-  digitalWrite(OLED_RST, LOW);
-  delay(100);
-  digitalWrite(OLED_RST, HIGH);
-  Wireling.selectPort(OLED_PORT);
-  display069.begin();
+  display069.begin(OLED_RST);
+  if (screenBuffer069.begin()) {
+    //memory allocation error- buffer too big!
+  }
   screenBuffer069.setFont(thinPixel7_10ptFontInfo);
   
   /* * * * * Light Sensor Stuff * * * * */
