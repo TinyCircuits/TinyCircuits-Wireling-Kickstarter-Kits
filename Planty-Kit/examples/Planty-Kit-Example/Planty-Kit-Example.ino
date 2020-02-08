@@ -22,7 +22,7 @@
 #include <Wire.h>               // For I2C communication with sensor
 #include <Wireling.h>
 #include <TinierScreen.h>       // For interfacing with the 0.69" OLED
-#include <TinyBuffer.h>         // For building a screen buffer for the 0.69" OLED
+#include <GraphicsBuffer.h>         // For building a screen buffer for the 0.69" OLED
 #include "font.h"
 #include <FastLED.h>            // For interfacing with the RGB LED
 #include "pitches.h"
@@ -37,8 +37,8 @@
 /* * * * * * * * * * 0.69" OLED * * * * * * * * * */
 #define OLED_PORT 0 // use Port 0 for screen
 #define OLED_RST (uint8_t) A0 //OLED reset line
-TinierScreen display069 = TinierScreen(OLED069);
-TinyBuffer screenBuffer069 = TinyBuffer(96, 16, colorDepth1BPP);
+TinierScreen display069 = TinierScreen(TinierScreen069);
+GraphicsBuffer screenBuffer069 = GraphicsBuffer(96, 16, colorDepth1BPP);
 
 /* * * * * * * * * * BUZZER * * * * * * * * * */
 #define pin (uint8_t) A1
