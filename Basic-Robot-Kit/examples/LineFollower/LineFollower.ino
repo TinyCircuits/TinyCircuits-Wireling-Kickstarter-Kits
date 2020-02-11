@@ -1,5 +1,5 @@
 /**********************************************************************
- * TinyCar Robot Line Follower
+ * Tiny Car Robot Line Follower
  * This program uses 2 Color Sensors, a Time-of-Flight Distance
  * Sensor, a 0.96" Screen, and 2 stepper motors with the RobotZero 
  * processor to create a car robot that follows a line with the ability
