@@ -1,9 +1,30 @@
-#include "TinyBuffer.h"
+/*
+TinierScreen.cpp - Last modified 6 January 2020
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+Written by Ben Rose for TinyCircuits.
+
+The latest version of this library can be found at https://TinyCircuits.com/
+*/
+
+
+#include "GraphicsBuffer.h"
 #include <avr/pgmspace.h>
-//template < const uint16_t SIZE >
-TinyBuffer::TinyBuffer(uint8_t width, uint8_t height, uint8_t colorDepth) {
-  _xMax = width-1;
-  _yMax = height-1;
+
+int GraphicsBuffer::begin(void) {
   _cursorX = 0;
   _cursorY = 0;
   _cursorXmin = 0;
@@ -18,29 +39,26 @@ TinyBuffer::TinyBuffer(uint8_t width, uint8_t height, uint8_t colorDepth) {
   _fontBitmap=0;
   _fontColor=0xFFFF;
   _fontBGcolor=0x0000;
-  _bitDepth=colorDepth;
   _colorMode = 0;
   _bufferSize = width*height;
   if(_bitDepth==16)_bufferSize*=2;
   if(_bitDepth==1)_bufferSize/=8;
-  bufferData=0;
+  bufferData=NULL;
   bufferData=(uint8_t *)malloc(_bufferSize);
-  if(!bufferData)while(1);
+  if(!bufferData){
+    return 1;
+  }
+  return 0;
 }
 
-//template < const uint16_t SIZE >
-//size_t TinyBuffer::write(uint8_t ch){
-//  return 1;
-//}
 
-
-void TinyBuffer::goTo(uint8_t x, uint8_t y) {
+void GraphicsBuffer::goTo(uint8_t x, uint8_t y) {
   if(x>_xMax||y>_yMax)return;
   setX(x,_xMax);
   setY(y,_yMax);
 }
 
-void TinyBuffer::setX(uint8_t x, uint8_t end) {
+void GraphicsBuffer::setX(uint8_t x, uint8_t end) {
   if(x>_xMax)x=_xMax;
   if(end>_xMax)end=_xMax;
   _cursorX = x;
@@ -49,7 +67,7 @@ void TinyBuffer::setX(uint8_t x, uint8_t end) {
   _cursorXmax = end;
 }
 
-void TinyBuffer::setY(uint8_t y, uint8_t end) {
+void GraphicsBuffer::setY(uint8_t y, uint8_t end) {
   if(y>_yMax)y=_yMax;
   if(end>_yMax)end=_yMax;
   _cursorY = y;
@@ -58,26 +76,26 @@ void TinyBuffer::setY(uint8_t y, uint8_t end) {
   _cursorYmax = end;
 }
 
-void TinyBuffer::clear(){
+void GraphicsBuffer::clear(){
   memset(bufferData, 0x00, _bufferSize);
 }
 
-uint8_t* TinyBuffer::getBuffer(){
+uint8_t* GraphicsBuffer::getBuffer(){
   return bufferData;
 }
 
-uint16_t TinyBuffer::getBufferSize(){
+uint16_t GraphicsBuffer::getBufferSize(){
   return _bufferSize;
 }
 
-void TinyBuffer::drawPixel(uint8_t x, uint8_t y, uint16_t color)
+void GraphicsBuffer::drawPixel(uint8_t x, uint8_t y, uint16_t color)
 {
   if(x>_xMax||y>_yMax)return;
   goTo(x,y);
   writePixel(color);
 }
 
-void TinyBuffer::writePixel(uint16_t color) {
+void GraphicsBuffer::writePixel(uint16_t color) {
   uint16_t offset = (uint16_t)(_pixelYinc*(_xMax+1))+(uint16_t)_pixelXinc;
   if(_bitDepth==16){
     bufferData[offset*2] =  color >> 8;
@@ -98,7 +116,11 @@ void TinyBuffer::writePixel(uint16_t color) {
       bufferData[pos] &=  ~(1 << (bitNum));
     }
   }
-  
+  incrementPixel();
+
+}
+
+void GraphicsBuffer::incrementPixel(void) {
   _pixelXinc++;
   if(_pixelXinc>_cursorXmax){
     _pixelXinc = _cursorXmin;
@@ -109,12 +131,12 @@ void TinyBuffer::writePixel(uint16_t color) {
   }
 }
 
-void TinyBuffer::setCursor(int x, int y){
+void GraphicsBuffer::setCursor(int x, int y){
   _cursorX=x;
   _cursorY=y;
 }
 
-void TinyBuffer::setFont(const FONT_INFO& fontInfo){
+void GraphicsBuffer::setFont(const FONT_INFO& fontInfo){
   _fontHeight=fontInfo.height;
   _fontFirstCh=fontInfo.startCh;
   _fontLastCh=fontInfo.endCh;
@@ -122,20 +144,20 @@ void TinyBuffer::setFont(const FONT_INFO& fontInfo){
   _fontBitmap=fontInfo.bitmap;
 }
 
-void TinyBuffer::fontColor(uint16_t f, uint16_t g){
+void GraphicsBuffer::fontColor(uint16_t f, uint16_t g){
   _fontColor=f;
   _fontBGcolor=g;
 }
 
-uint8_t TinyBuffer::getFontHeight(const FONT_INFO& fontInfo){
+uint8_t GraphicsBuffer::getFontHeight(const FONT_INFO& fontInfo){
   return fontInfo.height;
 }
 
-uint8_t TinyBuffer::getFontHeight(){
+uint8_t GraphicsBuffer::getFontHeight(){
   return _fontHeight;
 }
 
-uint8_t TinyBuffer::getPrintWidth(char * st){
+uint8_t GraphicsBuffer::getPrintWidth(char * st){
   if(!_fontFirstCh)return 0;
   uint8_t i,amtCh,totalWidth;
   totalWidth=0;
@@ -146,7 +168,7 @@ uint8_t TinyBuffer::getPrintWidth(char * st){
   return totalWidth;
 }
 
-size_t TinyBuffer::write(uint8_t ch){
+size_t GraphicsBuffer::write(uint8_t ch){
   if(!_fontFirstCh)return 1;
   if(ch<_fontFirstCh || ch>_fontLastCh)return 1;
   if(_cursorX>_xMax || _cursorY>_yMax)return 1;
@@ -193,12 +215,14 @@ size_t TinyBuffer::write(uint8_t ch){
           if(data&(0x80>>i)){
             writePixel(_fontColor);
            }else{
-            writePixel(_fontBGcolor);
+            incrementPixel();
+            //writePixel(_fontBGcolor);
           }
       }
     }
     if((_cursorX+chWidth)<=_xMax){//did not have =
-      writePixel(_fontBGcolor);
+      //writePixel(_fontBGcolor);
+      incrementPixel();
     }
   }
   //endTransfer();

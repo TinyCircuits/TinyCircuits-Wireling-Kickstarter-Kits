@@ -1,5 +1,5 @@
 /*
-TinierScreen.cpp - Last modified 11 February 2016
+TinierScreen.cpp - Last modified 6 January 2020
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -274,14 +274,12 @@ void TinierScreen::begin(void) {
   sendCommand(255);//0xAF
   
   sendCommand(SSD1306_SETPRECHARGE);
-  if (_type == 72)sendCommand(0x22);//////////////external?
-  if (_type == 96)sendCommand(0xF1);
-  if (_type == 128)sendCommand(0xF1);
+  sendCommand(0xF1);
   
   sendCommand(SSD1306_SETVCOMDETECT);///////try 0x30 for all?
   if (_type == 72)sendCommand(0x20);
-  if (_type == 96)sendCommand(0x20);
-  if (_type == 128)sendCommand(0x40);
+  if (_type == 96)sendCommand(0xFF);//0x40
+  if (_type == 128)sendCommand(0x80);//0x40
 
   sendCommand(SSD1306_SETMULTIPLEX);
   if (_type == 72)sendCommand(40 - 1);
@@ -300,12 +298,17 @@ void TinierScreen::begin(void) {
 
   sendCommand(SSD1306_DISPLAYON);
 
-
-
-
-  
   
 }
+
+void TinierScreen::begin(uint8_t resetPin) {
+  _resetPin=resetPin;
+  pinMode(_resetPin, OUTPUT);
+  digitalWrite(_resetPin, LOW);
+  digitalWrite(_resetPin, HIGH);
+  begin();
+}
+
 
 /*
 TinierScreen constructor

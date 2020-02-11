@@ -1,5 +1,5 @@
 /*
-TinierScreen.h - Last modified 11 February 2016
+TinierScreen.h - Last modified 6 January 2020
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -17,7 +17,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 Written by Ben Rose for TinyCircuits.
 
-The latest version of this library can be found at https://tiny-circuits.com/
+The latest version of this library can be found at https://TinyCircuits.com/
 */
 
 #ifndef TinierScreen_h
@@ -26,9 +26,9 @@ The latest version of this library can be found at https://tiny-circuits.com/
 #include "Arduino.h"
 #include "SPI.h"
 
-#define OLED042 72
-#define OLED069 96
-#define OLED096 128
+#define TinierScreen042 72
+#define TinierScreen069 96
+#define TinierScreen096 128
 
 #define SSD1306_DEFAULT_ADDRESS 0x3C
 #define SSD1306_SETCONTRAST 0x81
@@ -73,6 +73,7 @@ class TinierScreen : public Print {
   void startCommand(void);
   void endTransfer(void);
   void begin(void);
+  void begin(uint8_t resetPin);
   void on(void);
   void off(void);
   void setFlip(uint8_t);
@@ -115,7 +116,7 @@ class TinierScreen : public Print {
   static const uint8_t yMax=63;
  private:
   
-  uint8_t _addr, _cursorX, _cursorY, _fontHeight, _fontFirstCh, _fontLastCh, _bitDepth, _flipDisplay, _mirrorDisplay, _colorMode, _externalIO, _type;
+  uint8_t _addr, _cursorX, _cursorY, _fontHeight, _fontFirstCh, _fontLastCh, _bitDepth, _flipDisplay, _mirrorDisplay, _colorMode, _externalIO, _type, _resetPin;
   uint16_t  _fontColor, _fontBGcolor;
   //const FONT_CHAR_INFO* _fontDescriptor;
   const unsigned char* _fontBitmap;

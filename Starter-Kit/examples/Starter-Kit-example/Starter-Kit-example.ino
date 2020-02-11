@@ -21,8 +21,7 @@
 #include <Wire.h>               // For I2C communication with sensor
 #include <Wireling.h>
 #include <TinierScreen.h>       // For interfacing with the 0.42" OLED
-#include <TinyBuffer.h>         // For building a screen buffer for the 0.42" OLED
-#include "font.h"
+#include <GraphicsBuffer.h>     // For building a screen buffer for the 0.42" OLED
 #include <FastLED.h>            // For interfacing with the RGB LED
 #include "VL53L0X.h"            // For interfacing with the Time-of-Flight Distance sensor
 #include <Adafruit_TCS34725.h>  // For interfacing with the Color Sensor
@@ -35,9 +34,12 @@
 #endif
 
 /* * * * * * * * * * 0.42" OLED * * * * * * * * * */
-#define OLED_PORT 0 // use Port 0 for screen
-TinierScreen display042 = TinierScreen(OLED042);
-TinyBuffer screenBuffer042 = TinyBuffer(72, 40, colorDepth1BPP);
+#define OLED_042_PORT 0 // use Port 0 for screen
+#define OLED_042_RESET (int) A0 // use Port 0 reset pin
+#define OLED_042_WIDTH 72
+#define OLED_042_HEIGHT 40
+TinierScreen display042 = TinierScreen(TinierScreen042);
+GraphicsBuffer screenBuffer042 = GraphicsBuffer(OLED_042_WIDTH, OLED_042_HEIGHT, colorDepth1BPP);
 
 /* * * * * * * * * * * RGB LED * * * * * * * * * * * */
 #define NUM_LEDS 1 //this is the number of LEDs in your strip
@@ -63,9 +65,11 @@ void setup(void) {
   delay(200); // boot sensor
   
   /* * * * * * Screen Stuff * * * * */
-  Wireling.selectPort(OLED_PORT);
-  display042.begin();
-  Wire.setClock(1000000);
+  Wireling.selectPort(OLED_042_PORT);
+  display042.begin(OLED_042_RESET);
+  if (screenBuffer042.begin()) {
+    //memory allocation error- buffer too big!
+  }
   screenBuffer042.setFont(thinPixel7_10ptFontInfo);
   
   /* * * * * RGB LED Stuff * * * * */
@@ -73,6 +77,7 @@ void setup(void) {
   FastLED.setBrightness(brightness);
   pinMode(DATA_PIN, OUTPUT);
   pinMode(TCS_LIGHT, OUTPUT);
+  
 
   /* * * * * TOF Stuff * * * * */
   Wireling.selectPort(TOF_PORT);
@@ -114,7 +119,7 @@ void updateRGBLED(uint16_t red, uint16_t green, uint16_t blue) {
 
 // print color sensor info to TinierScreen
 void printRGBtoOLED() {
-  Wireling.selectPort(OLED_PORT);           // select the Wireling screen port
+  Wireling.selectPort(OLED_042_PORT);           // select the Wireling screen port
   screenBuffer042.clear();                  // clear old screen contents
   screenBuffer042.setCursor(x = 24, y = 0);  // set cursor to (0, 0)
   screenBuffer042.print("R: " + String(r)); // print Red Value
@@ -130,7 +135,7 @@ void getTOFdistance() {
 }
 
 void printTOFdistance() {
-  Wireling.selectPort(OLED_PORT);           // select the Wireling screen port
+  Wireling.selectPort(OLED_042_PORT);           // select the Wireling screen port
   //screenBuffer042.clear();
   screenBuffer042.setCursor(x = 10, y = 24); // hard-coded to be last line
   screenBuffer042.print("Dist: " + distance + "mm");
