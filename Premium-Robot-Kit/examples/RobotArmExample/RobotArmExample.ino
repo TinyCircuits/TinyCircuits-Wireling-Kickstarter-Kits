@@ -1,16 +1,17 @@
 //-------------------------------------------------------------------------------
 //  TinyCircuits Robot Kit Examples
-//  Last Updated 17 Feb 2020
+//  Last Updated 24 Feb 2020
 //
 //  This example includes line following and object detecting code for the
 //  RobotZero processor board in the robot car and arm kits. The sensors detected
 //  at startup determine which example runs. The line following code attemps to
 //  follow a 5 to 10mm wide dark line drawn on a light sheet. The object detecting
-//  code attempts to find a small object like a pen cap/chapstick to pick up and throw.
+//  code attempts to find a small object like a pen cap to pick up and throw.
 //
-//  Written by Ben Rose for TinyCircuits, https://TinyCircuits.com
+//  Written by Ben Rose for TinyCircuits, https://tinycircuits.com
 //
 //-------------------------------------------------------------------------------
+
 
 #include <Wire.h>
 #include <Wireling.h>
@@ -20,8 +21,8 @@
 #include <SPI.h>
 #include <TinierScreen.h>
 #include <GraphicsBuffer.h>
-#include "Adafruit_TCS34725.h"  // The library used for the Color Sensor
-#include "VL53L0X.h"    // For interfacing with the Time-of-Flight Distance sensor
+#include "Adafruit_TCS34725.h"
+#include "VL53L0X.h"
 
 #if defined (ARDUINO_ARCH_AVR)
 #define SerialMonitorInterface Serial
@@ -29,14 +30,18 @@
 #define SerialMonitorInterface SerialUSB
 #endif
 
+
 TinierScreen display = TinierScreen(TinierScreen096);
 GraphicsBuffer screenBuffer = GraphicsBuffer(128, 64, colorDepth1BPP);
-int displayPort = 1;
-int resetPin = A0 + displayPort;
 
+ServoDriver servo(ROBOTZERO_SERVO_ADDR); //value passed is the address- remove resistor R1 for 1, R2 for 2, R1 and R2 for 3
 
 VL53L0X distanceSensor; // Name of sensor
 int tofPort = 0;  // Port # of sensor (Found on Wireling Adapter Board)
+
+int displayPort = 1;
+int resetPin = A0 + displayPort;
+
 
 unsigned int getTOFMeasurement() {
   Wireling.selectPort(tofPort);
@@ -48,14 +53,15 @@ unsigned int getTOFMeasurement() {
 }
 
 
+
+
 /* Initialise with specific int time and gain values */
 Adafruit_TCS34725 tcs0 = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_24MS, TCS34725_GAIN_60X);
 Adafruit_TCS34725 tcs1 = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_24MS, TCS34725_GAIN_60X);
+
 int leftSensorPort = 1;
 int rightSensorPort = 2;
 
-
-ServoDriver servo(ROBOTZERO_SERVO_ADDR); //value passed is the address- remove resistor R1 for 1, R2 for 2, R1 and R2 for 3
 
 //1000=open
 const int clawServo = 1;
@@ -86,7 +92,10 @@ void setup() {
 
   servo.useResetPin();
   if (servo.begin(10000)) {
-    SerialMonitorInterface.println("Servo driver not detected!");
+    while (1) {
+      SerialMonitorInterface.println("Servo driver not detected!");
+      delay(1000);
+    }
   }
   servo.setServo(1, 1500);
   servo.setServo(2, 1500);
@@ -97,6 +106,7 @@ void setup() {
   setMotorCurrent(80);
 
   //try to init color sensors, change screen port to 0 for line follower example
+  bool noColorSensor = false;
   Wireling.selectPort(leftSensorPort);
   if (tcs0.begin()) {
     tcs0.setInterrupt(true);
@@ -106,10 +116,26 @@ void setup() {
       displayPort = 0;
       resetPin = A0 + displayPort;
       tofPort = 3;
+    } else {
+      while (1) {
+        SerialMonitorInterface.println("Unexpected Wireling configuration! 1");
+        delay(1000);
+      }
     }
+  } else {
+    noColorSensor = true;
   }
 
   Wireling.selectPort(displayPort);
+  if (noColorSensor) {
+    Wire.beginTransmission(SSD1306_DEFAULT_ADDRESS);
+    if (Wire.endTransmission()) {
+      while (1) {
+        SerialMonitorInterface.println("Unexpected Wireling configuration! 2");
+        delay(1000);
+      }
+    }
+  }
   display.begin(resetPin);
   display.setFlip(true);
   if (screenBuffer.begin()) {
@@ -124,14 +150,13 @@ void setup() {
     distanceSensor.setTimeout(5);
     distanceSensor.setMeasurementTimingBudget(100000);
     distanceSensor.startContinuous();
-  } else {
-    while (1);
   }
 
   closeClaw(200);
   servo.setServo(frontBackServo, 2200);
   servo.setServo(upDownServo, scanningHeightServoPosition);
 }
+
 
 
 void loop() {
